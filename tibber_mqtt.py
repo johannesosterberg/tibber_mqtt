@@ -27,23 +27,28 @@ def connect_mqtt():
     client.on_connect = on_connect
     client.connect(broker, port)
     return client
-
-account = tibber.Account(ACCESS_TOKEN)
-home = account.homes[0]
     
+account = tibber.Account(ACCESS_TOKEN)
+home = account.homes[0]   
 @home.event("live_measurement") 
 async def process_data(data):
   print("consumption:",data.power, "Wh")
+  print("Timestamp:",data.timestamp)
+  #timestamp = time.mktime(time.strptime(data.timestamp, '%Y-%m-%dT%H:%M:%S.000+01:00'))
+
   tibberpower = client.publish(topic='tibber/power1',payload=data.power,qos=1)
   tibberpower.wait_for_publish()
   print("MQTT is send:",tibberpower.is_published())
-  time.sleep(3)
+  last_update = time.strftime("%H:%M:%S %d.%m.%Y",  time.localtime())
+  print("Last update:",last_update)
     
 def when_to_stop(data):
-  return False
+  return True
+
 
 client = connect_mqtt()
 client.loop_start()
-home.start_live_feed(user_agent = "UserAgent/0.0.1", exit_condition = when_to_stop)
 
-
+while True:
+  home.start_live_feed(user_agent = "UserAgent/0.0.1", exit_condition = when_to_stop)
+  time.sleep(5)
